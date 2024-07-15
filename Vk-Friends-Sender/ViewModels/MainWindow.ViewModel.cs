@@ -5,14 +5,20 @@ using System.Windows.Input;
 
 using Avalonia.Platform.Storage;
 
+using Newtonsoft.Json;
+
 using ReactiveUI;
 
 using Vk_Friends_Sender.Models;
 
 namespace Vk_Friends_Sender.ViewModels {
+	[JsonObject(MemberSerialization.OptOut)]
 	public class MainWindow : ReactiveObject {
-		public ObservableCollection<Proxy> Proxies { get; } = [
-#if DEBUG
+		public ObservableCollection<Proxy> Proxies { get; }
+#if RELEASE
+			= new();
+#elif DEBUG
+			= [
 			"host:0:username:password",
 			"host:0:username:password",
 			"host:0:username:password",
@@ -24,11 +30,14 @@ namespace Vk_Friends_Sender.ViewModels {
 			"host:0:username:password",
 			"host:0:username:password",
 			"host:0:username:password",
-#endif
 		];
+#endif
 
-		public ObservableCollection<Account> Cookies { get; } = [
-#if DEBUG
+		public ObservableCollection<Account> Cookies { get; }
+#if RELEASE
+			= new();
+#elif DEBUG
+			= [
 			"Some token",
 			"Some token",
 			"Some token",
@@ -40,15 +49,17 @@ namespace Vk_Friends_Sender.ViewModels {
 			"Some token",
 			"Some token",
 			"Some token",
-#endif
 		];
+#endif
 
 		// External properties
-		public required IStorageProvider Storage { get; init; }
+		[JsonIgnore]
+		public IStorageProvider Storage { get; set; }
 
 		#region Proxies
 
 		// host:port:username:password
+		[JsonIgnore]
 		public ICommand Proxies_Load => ReactiveCommand.CreateFromTask(
 			async () => {
 				// Pick file
@@ -74,12 +85,14 @@ namespace Vk_Friends_Sender.ViewModels {
 			}
 		);
 
+		[JsonIgnore]
 		public ICommand Proxies_Clear => ReactiveCommand.Create(() => Proxies.Clear());
 
 		#endregion
 
 		#region Cookies
 
+		[JsonIgnore]
 		public ICommand Cookies_Load => ReactiveCommand.CreateFromTask(
 			async () => {
 				// Pick folder 
@@ -103,6 +116,7 @@ namespace Vk_Friends_Sender.ViewModels {
 			}
 		);
 
+		[JsonIgnore]
 		public ICommand Cookies_Clear => ReactiveCommand.Create(() => Cookies.Clear());
 
 		#endregion
