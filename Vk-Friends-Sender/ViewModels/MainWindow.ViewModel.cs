@@ -61,14 +61,12 @@ namespace Vk_Friends_Sender.ViewModels {
 					FileTypeFilter = [
 						FilePickerFileTypes.TextPlain
 					],
-					Title = "Cookies picker"
+					Title = "Proxies picker"
 				};
 
-				if (await Storage.OpenFilePickerAsync(options) is not {Count: > 0} files) {
+				if (await Storage.OpenFilePickerAsync(options) is not {Count: > 0} files || files.FirstOrDefault() is not {} file) {
 					return;
 				}
-				
-				var file = files.First();
 
 				// Process file
 
@@ -88,8 +86,31 @@ namespace Vk_Friends_Sender.ViewModels {
 
 		#region Cookies
 
-		public ICommand Cookies_Load { get; }
-		public ICommand Cookies_Clear { get; }
+		public ICommand Cookies_Load => ReactiveCommand.CreateFromTask(
+			async () => {
+				// Pick folder 
+				var options = new FolderPickerOpenOptions {
+					AllowMultiple = false,
+					Title = "Cookies folder picker"
+				};
+
+				if (await Storage.OpenFolderPickerAsync(options) is not {Count: > 0} folders || folders.FirstOrDefault() is not {} folder) {
+					return;
+				}
+				
+				// Process folder
+
+				await foreach (var file in folder.GetItemsAsync().OfType<IStorageFile>()) {
+					if (file.Name[(file.Name.LastIndexOf('.') + 1)..] != "txt") {
+						continue;
+					}
+					
+					Cookies.Add(Cookie.FromIStorageFile(file));
+				}
+			}
+		);
+
+		public ICommand Cookies_Clear => ReactiveCommand.Create(() => Cookies.Clear());
 
 		#endregion
 	}

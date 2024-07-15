@@ -31,6 +31,12 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 
 				this.BindCommand(ViewModel, x => x.Proxies_Clear, x => x.btn_ProxiesClear)
 					.DisposeWith(dispose);
+
+				this.BindCommand(ViewModel, x => x.Cookies_Load, x => x.btn_CookiesLoad)
+					.DisposeWith(dispose);
+
+				this.BindCommand(ViewModel, x => x.Cookies_Clear, x => x.btn_CookiesClear)
+					.DisposeWith(dispose);
 			}
 		);
 	}
