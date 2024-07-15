@@ -8,6 +8,7 @@ using Avalonia.Platform.Storage;
 using Newtonsoft.Json;
 
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 
 using Vk_Friends_Sender.Models;
 
@@ -51,6 +52,9 @@ namespace Vk_Friends_Sender.ViewModels {
 			"Some token",
 		];
 #endif
+		
+		[Reactive]
+		public long UserId { get; set; }
 
 		// External properties
 		[JsonIgnore]

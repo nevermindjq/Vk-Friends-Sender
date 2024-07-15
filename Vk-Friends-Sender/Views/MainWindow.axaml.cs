@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reactive.Disposables;
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Logging;
@@ -55,6 +56,14 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 
 				this.OneWayBind(ViewModel, x => x.Cookies, x => x.list_Tokens.ItemsSource)
 					.DisposeWith(dispose);
+
+				this.Bind(
+					ViewModel,
+					x => x.UserId,
+					x => x.box_UserId.Text,
+					x => x == 0 ? "" : x.ToString(),
+					x => long.TryParse(x, out var id) ? id : 0
+				).DisposeWith(dispose);
 				
 				// Commands binding
 				this.BindCommand(ViewModel, x => x.Proxies_Load, x => x.btn_ProxiesLoad)
