@@ -13,8 +13,8 @@ class Program {
 
 	public static AppBuilder BuildAvaloniaApp()
 		=> AppBuilder.Configure<App>()
+					 .LogToSerilog()
 					 .UseReactiveUI()
 					 .UsePlatformDetect()
-					 .WithInterFont()
-					 .LogToTrace();
+					 .WithInterFont();
 }
