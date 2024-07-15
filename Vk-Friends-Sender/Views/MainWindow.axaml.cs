@@ -8,7 +8,7 @@ using Vk_Friends_Sender.ViewModels;
 
 namespace Vk_Friends_Sender.Views;
 
-public partial class MainWindow : ReactiveWindow<MainWindowModel> {
+public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 	public MainWindow() {
 		InitializeComponent();
 
@@ -21,9 +21,15 @@ public partial class MainWindow : ReactiveWindow<MainWindowModel> {
 				// Properties binding
 				this.OneWayBind(ViewModel, x => x.Proxies, x => x.list_Proxies.ItemsSource)
 					.DisposeWith(dispose);
+
+				this.OneWayBind(ViewModel, x => x.Cookies, x => x.list_Cookies.ItemsSource)
+					.DisposeWith(dispose);
 				
 				// Commands binding
 				this.BindCommand(ViewModel, x => x.Proxies_Load, x => x.btn_ProxiesLoad)
+					.DisposeWith(dispose);
+
+				this.BindCommand(ViewModel, x => x.Proxies_Clear, x => x.btn_ProxiesClear)
 					.DisposeWith(dispose);
 			}
 		);
