@@ -50,7 +50,7 @@
      Grid.Row="1"
      Margin="0,10,0,0"
      Name="list_Proxies">
-     <ListBox.DataTemplates>
+     <ListBox.ItemTemplate>
       <DataTemplate DataType="{x:Type models:Proxy}">
        <Grid ColumnDefinitions="*, *, *, *" VerticalAlignment="Center">
         <Grid.Styles>
@@ -68,7 +68,7 @@
         <TextBlock Grid.Column="3" Text="{Binding Password}" />
        </Grid>
       </DataTemplate>
-     </ListBox.DataTemplates>
+     </ListBox.ItemTemplate>
     </ListBox>
    </Grid>
 
@@ -78,7 +78,7 @@
     Margin="5,0"
     RowDefinitions="Auto, *">
     <StackPanel Grid.Row="0" Orientation="Vertical">
-     <Label Margin="0,0,0,5">Cookies</Label>
+     <Label Margin="0,0,0,5">Tokens</Label>
 
      <StackPanel Orientation="Horizontal">
       <StackPanel.Styles>
@@ -87,25 +87,25 @@
        </Style>
       </StackPanel.Styles>
 
-      <Button Margin="0,0,5,0" Name="btn_CookiesLoad">Load</Button>
-      <Button Name="btn_CookiesClear">Clear</Button>
+      <Button Margin="0,0,5,0" Name="btn_TokensLoad">Load</Button>
+      <Button Name="btn_TokensClear">Clear</Button>
      </StackPanel>
     </StackPanel>
 
     <ListBox
      Grid.Row="1"
      Margin="0,10,0,0"
-     Name="list_Cookies">
-     <ListBox.DataTemplates>
-      <DataTemplate DataType="{x:Type models:Cookie}">
+     Name="list_Tokens">
+     <ListBox.ItemTemplate>
+      <DataTemplate DataType="{x:Type models:Account}">
        <TextBlock
         Margin="1,0"
-        Text="{Binding Filename}"
+        Text="{Binding Path=Token}"
         TextAlignment="Left"
         TextTrimming="CharacterEllipsis"
         TextWrapping="NoWrap" />
       </DataTemplate>
-     </ListBox.DataTemplates>
+     </ListBox.ItemTemplate>
     </ListBox>
    </Grid>
   </Grid>

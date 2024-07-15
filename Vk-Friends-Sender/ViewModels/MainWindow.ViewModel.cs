@@ -24,26 +24,22 @@ namespace Vk_Friends_Sender.ViewModels {
 			"host:0:username:password",
 			"host:0:username:password",
 			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
 #endif
 		];
 
-		public ObservableCollection<Cookie> Cookies { get; } = [
+		public ObservableCollection<Account> Cookies { get; } = [
 #if DEBUG
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
-			new(),
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
+			"Some token",
 #endif
 		];
 
@@ -70,11 +66,9 @@ namespace Vk_Friends_Sender.ViewModels {
 
 				// Process file
 
-				using (var stream = await file.OpenReadAsync()) {
-					using (var reader = new StreamReader(stream)) {
-						while (!reader.EndOfStream) {
-							Proxies.Add(await reader.ReadLineAsync());
-						}
+				using (var reader = new StreamReader(await file.OpenReadAsync())) {
+					while (!reader.EndOfStream) {
+						Proxies.Add((await reader.ReadLineAsync())!.Trim());
 					}
 				}
 			}
@@ -89,23 +83,22 @@ namespace Vk_Friends_Sender.ViewModels {
 		public ICommand Cookies_Load => ReactiveCommand.CreateFromTask(
 			async () => {
 				// Pick folder 
-				var options = new FolderPickerOpenOptions {
+				var options = new FilePickerOpenOptions {
 					AllowMultiple = false,
-					Title = "Cookies folder picker"
+					FileTypeFilter = [
+						FilePickerFileTypes.TextPlain, 
+					],
+					Title = "Tokens picker"
 				};
 
-				if (await Storage.OpenFolderPickerAsync(options) is not {Count: > 0} folders || folders.FirstOrDefault() is not {} folder) {
+				if (await Storage.OpenFilePickerAsync(options) is not {Count: > 0} files || files.FirstOrDefault() is not {} file) {
 					return;
 				}
 				
-				// Process folder
-
-				await foreach (var file in folder.GetItemsAsync().OfType<IStorageFile>()) {
-					if (file.Name[(file.Name.LastIndexOf('.') + 1)..] != "txt") {
-						continue;
-					}
-					
-					Cookies.Add(Cookie.FromIStorageFile(file));
+				// Process file
+				
+				using (var reader = new StreamReader(await file.OpenReadAsync())) {
+					Cookies.Add((await reader.ReadLineAsync())!.Trim());
 				}
 			}
 		);

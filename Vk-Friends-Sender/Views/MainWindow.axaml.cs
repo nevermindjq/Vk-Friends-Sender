@@ -20,7 +20,7 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 				this.OneWayBind(ViewModel, x => x.Proxies, x => x.list_Proxies.ItemsSource)
 					.DisposeWith(dispose);
 
-				this.OneWayBind(ViewModel, x => x.Cookies, x => x.list_Cookies.ItemsSource)
+				this.OneWayBind(ViewModel, x => x.Cookies, x => x.list_Tokens.ItemsSource)
 					.DisposeWith(dispose);
 				
 				// Commands binding
@@ -30,10 +30,10 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 				this.BindCommand(ViewModel, x => x.Proxies_Clear, x => x.btn_ProxiesClear)
 					.DisposeWith(dispose);
 
-				this.BindCommand(ViewModel, x => x.Cookies_Load, x => x.btn_CookiesLoad)
+				this.BindCommand(ViewModel, x => x.Cookies_Load, x => x.btn_TokensLoad)
 					.DisposeWith(dispose);
 
-				this.BindCommand(ViewModel, x => x.Cookies_Clear, x => x.btn_CookiesClear)
+				this.BindCommand(ViewModel, x => x.Cookies_Clear, x => x.btn_TokensClear)
 					.DisposeWith(dispose);
 			}
 		);
