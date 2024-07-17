@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -14,6 +15,8 @@ using Newtonsoft.Json;
 
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
+
+using Serilog;
 
 using Vk_Friends_Sender.Models;
 using Vk_Friends_Sender.Services;
@@ -180,7 +183,8 @@ namespace Vk_Friends_Sender.ViewModels {
 		#region Control Panel
 
 		private readonly ICollection<Thread> _worker_threads = new List<Thread>();
-		private readonly ManualResetEvent _event = new(false);
+		private readonly ManualResetEvent _main_event = new(false);
+		private readonly ManualResetEvent _groups_event = new(false);
 		private TwoCaptcha.TwoCaptcha? _solver;
 		private Thread? _execution_thread;
 		private int _proxy_index = 0;
@@ -193,39 +197,72 @@ namespace Vk_Friends_Sender.ViewModels {
 				
 				_execution_thread = new(
 					state => {
-						var @event = (ManualResetEvent)state!;
 						var count = Tokens.Count;
+
+						int i = 0;
 						
-						foreach (var token in Tokens.Select(x => x.Token)) {
-							var thread = new Thread(
-								async state => {
-									using (var vk = new Vk(Proxies[_proxy_index], token, solver: _solver)) {
-										await vk.AddToFriendsAsync(UserId);
-									}
-
-									if (Interlocked.Increment(ref _proxy_index) == Proxies.Count) {
-										_proxy_index = 0;
-									}
-
-									if (Interlocked.Decrement(ref count) == 0) {
-										((ManualResetEvent)state!).Set();
-									}
-								}
-							);
-
-							thread.Start(@event);
+						var query = from s in Tokens
+								let num = i++
+								group s by num / Threads
+								into g
+								select g;
+						
+						foreach (var group in query) {
+							var items = group.Count();
 							
-							_worker_threads.Add(thread);
+							foreach (var account in group) {
+								var thread = new Thread(
+									async () => {
+										using (var vk = new Vk(Proxies[_proxy_index], account.Token, solver: _solver)) {
+											try {
+												await vk.AddToFriendsAsync(UserId);
+											}
+											catch (Exception e) {
+												Log.Error(e, "Error while execution adding");
+											}
+										}
+
+										if (Interlocked.Increment(ref _proxy_index) == Proxies.Count) {
+											_proxy_index = 0;
+										}
+
+										if (Interlocked.Decrement(ref items) == 0) {
+											_groups_event.Set();
+										}
+
+										if (Interlocked.Decrement(ref count) == 0) {
+											_main_event.Set();
+										}
+									}
+								);
+
+								thread.Start();
+							
+								_worker_threads.Add(thread);
+							}
+
+							try {
+								_groups_event.WaitOne();
+								_groups_event.Reset();
+							}
+							catch {
+								// ignore
+							}
 						}
 
-						@event.WaitOne();
-						@event.Reset();
+						try {
+							_main_event.WaitOne();
+							_main_event.Reset();
+						}
+						catch {
+							// ignore
+						}
 						
 						_Cancel();
 					}
 				);
 
-				_execution_thread.Start(_event);
+				_execution_thread.Start();
 				
 				//
 				IsExecution = true;
@@ -243,7 +280,7 @@ namespace Vk_Friends_Sender.ViewModels {
 			
 			Dispatcher.UIThread.Invoke(() => IsExecution = false);
 			
-			_execution_thread.Interrupt();
+			_execution_thread?.Interrupt();
 		}
 
 		#endregion
