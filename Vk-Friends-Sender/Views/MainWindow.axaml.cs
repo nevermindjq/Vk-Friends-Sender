@@ -54,7 +54,7 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 				this.OneWayBind(ViewModel, x => x.Proxies, x => x.list_Proxies.ItemsSource)
 					.DisposeWith(dispose);
 
-				this.OneWayBind(ViewModel, x => x.Cookies, x => x.list_Tokens.ItemsSource)
+				this.OneWayBind(ViewModel, x => x.Tokens, x => x.list_Tokens.ItemsSource)
 					.DisposeWith(dispose);
 
 				this.Bind(
@@ -76,6 +76,19 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 					.DisposeWith(dispose);
 
 				this.BindCommand(ViewModel, x => x.Cookies_Clear, x => x.btn_TokensClear)
+					.DisposeWith(dispose);
+
+				// Control Panel
+				this.OneWayBind(ViewModel, x => x.CancelCanExecute, x => x.btn_Cancel.IsEnabled)
+					.DisposeWith(dispose);
+				
+				this.BindCommand(ViewModel, x => x.Cancel, x => x.btn_Cancel)
+					.DisposeWith(dispose);
+
+				this.OneWayBind(ViewModel, x => x.SubmitCanExecute, x => x.btn_Submit.IsEnabled)
+					.DisposeWith(dispose);
+				
+				this.BindCommand(ViewModel, x => x.Submit, x => x.btn_Submit)
 					.DisposeWith(dispose);
 			}
 		);

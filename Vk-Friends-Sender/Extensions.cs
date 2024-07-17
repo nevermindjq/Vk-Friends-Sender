@@ -1,12 +1,12 @@
 using Avalonia;
 using Avalonia.Logging;
 
-using Serilog;
-
 using Vk_Friends_Sender.Logging;
 
+using Serilog;
+
 namespace Vk_Friends_Sender {
-	internal static class Extensions {
+	public static class Extensions {
 		public static AppBuilder LogToSerilog(this AppBuilder app, LogEventLevel level = LogEventLevel.Verbose, params string[] areas) {
 			Log.Logger = new LoggerConfiguration()
 						 .Enrich.FromLogContext()

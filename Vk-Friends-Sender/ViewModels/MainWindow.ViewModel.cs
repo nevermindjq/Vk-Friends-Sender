@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 using Avalonia.Platform.Storage;
@@ -34,7 +36,7 @@ namespace Vk_Friends_Sender.ViewModels {
 		];
 #endif
 
-		public ObservableCollection<Account> Cookies { get; }
+		public ObservableCollection<Account> Tokens { get; }
 #if RELEASE
 			= new();
 #elif DEBUG
@@ -115,13 +117,46 @@ namespace Vk_Friends_Sender.ViewModels {
 				// Process file
 				
 				using (var reader = new StreamReader(await file.OpenReadAsync())) {
-					Cookies.Add((await reader.ReadLineAsync())!.Trim());
+					Tokens.Add((await reader.ReadLineAsync())!.Trim());
 				}
 			}
 		);
 
 		[JsonIgnore]
-		public ICommand Cookies_Clear => ReactiveCommand.Create(() => Cookies.Clear());
+		public ICommand Cookies_Clear => ReactiveCommand.Create(() => Tokens.Clear());
+
+		#endregion
+
+		#region Control Panel
+
+		private Thread _execuition_thread;
+
+		[Reactive] public bool SubmitCanExecute { get; private set;} = true;
+		[Reactive] public bool CancelCanExecute { get; private set;} = false;
+		
+		public ICommand Submit => ReactiveCommand.Create(
+			() => {
+				_execuition_thread = new Thread(
+					() => {
+						foreach (var token in Tokens.Select(x => x.Token)) {
+							Task.Factory.StartNew(
+								async () => {
+									
+								}
+							);
+						}
+					}
+				);
+				
+				_execuition_thread.Start();
+				
+				//
+				CancelCanExecute = true;
+				SubmitCanExecute = false;
+			}
+		);
+		
+		public ICommand Cancel { get; }
 
 		#endregion
 	}
