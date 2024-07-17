@@ -79,13 +79,7 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 					.DisposeWith(dispose);
 
 				// Control Panel
-				this.OneWayBind(ViewModel, x => x.CancelCanExecute, x => x.btn_Cancel.IsEnabled)
-					.DisposeWith(dispose);
-				
 				this.BindCommand(ViewModel, x => x.Cancel, x => x.btn_Cancel)
-					.DisposeWith(dispose);
-
-				this.OneWayBind(ViewModel, x => x.SubmitCanExecute, x => x.btn_Submit.IsEnabled)
 					.DisposeWith(dispose);
 				
 				this.BindCommand(ViewModel, x => x.Submit, x => x.btn_Submit)

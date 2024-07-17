@@ -1,11 +1,14 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 
 using Newtonsoft.Json;
 
@@ -58,6 +61,9 @@ namespace Vk_Friends_Sender.ViewModels {
 		[Reactive]
 		public long UserId { get; set; }
 
+		[Reactive]
+		public bool IsExecution { get; set; } = false;
+
 		// External properties
 		[JsonIgnore]
 		public IStorageProvider Storage { get; set; }
@@ -88,11 +94,13 @@ namespace Vk_Friends_Sender.ViewModels {
 						Proxies.Add((await reader.ReadLineAsync())!.Trim());
 					}
 				}
-			}
+			},
+			this.WhenAnyValue(x => x.IsExecution)
+				.Select(x => !x)
 		);
 
 		[JsonIgnore]
-		public ICommand Proxies_Clear => ReactiveCommand.Create(() => Proxies.Clear());
+		public ICommand Proxies_Clear => ReactiveCommand.Create(() => Proxies.Clear(), this.WhenAnyValue(x => x.IsExecution).Select(x => !x));
 
 		#endregion
 
@@ -119,44 +127,73 @@ namespace Vk_Friends_Sender.ViewModels {
 				using (var reader = new StreamReader(await file.OpenReadAsync())) {
 					Tokens.Add((await reader.ReadLineAsync())!.Trim());
 				}
-			}
+			},
+			this.WhenAnyValue(x => x.IsExecution)
+				.Select(x => !x)
 		);
 
 		[JsonIgnore]
-		public ICommand Cookies_Clear => ReactiveCommand.Create(() => Tokens.Clear());
+		public ICommand Cookies_Clear => ReactiveCommand.Create(() => Tokens.Clear(), this.WhenAnyValue(x => x.IsExecution).Select(x => !x));
 
 		#endregion
 
 		#region Control Panel
 
+		private ICollection<Thread> _worker_threads = new List<Thread>();
 		private Thread _execuition_thread;
-
-		[Reactive] public bool SubmitCanExecute { get; private set;} = true;
-		[Reactive] public bool CancelCanExecute { get; private set;} = false;
+		private ManualResetEvent _event;
 		
 		public ICommand Submit => ReactiveCommand.Create(
 			() => {
-				_execuition_thread = new Thread(
-					() => {
+				_execuition_thread = new(
+					state => {
+						var @event = (ManualResetEvent)state;
+						var count = Tokens.Count;
+						
 						foreach (var token in Tokens.Select(x => x.Token)) {
-							Task.Factory.StartNew(
-								async () => {
-									
+							var thread = new Thread(
+								state => {
+									// TODO action
+
+									if (Interlocked.Decrement(ref count) == 0) {
+										((ManualResetEvent)state).Set();
+									}
 								}
 							);
+
+							thread.Start(@event);
+							
+							_worker_threads.Add(thread);
 						}
+
+						@event.WaitOne();
+						@event.Reset();
+						
+						_Cancel();
 					}
 				);
-				
-				_execuition_thread.Start();
+
+				_event = new(false);
+				_execuition_thread.Start(_event);
 				
 				//
-				CancelCanExecute = true;
-				SubmitCanExecute = false;
-			}
+				IsExecution = true;
+			},
+			this.WhenAnyValue(x => x.IsExecution)
+				.Select(x => !x)
 		);
-		
-		public ICommand Cancel { get; }
+
+		public ICommand Cancel => ReactiveCommand.Create(_Cancel, this.WhenAnyValue(x => x.IsExecution));
+
+		private void _Cancel() {
+			foreach (var thread in _worker_threads) {
+				thread.Interrupt();
+			}
+			
+			Dispatcher.UIThread.Invoke(() => IsExecution = false);
+			
+			_execuition_thread.Interrupt();
+		}
 
 		#endregion
 	}
