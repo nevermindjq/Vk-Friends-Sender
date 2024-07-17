@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
@@ -58,12 +58,31 @@ namespace Vk_Friends_Sender.ViewModels {
 		];
 #endif
 		
+		// User Id
 		[Reactive]
 		public long UserId { get; set; }
 
 		[Reactive]
-		public bool IsExecution { get; set; } = false;
+		public string UserId_Error { get; set; } = "";
+		
+		// Api Key
+		[Reactive]
+		public string ApiKey { get; set; } = "";
 
+		[Reactive]
+		public string ApiKey_Error { get; set; } = "";
+		
+		// Threads
+		[Reactive]
+		public uint Threads { get; set; }
+
+		[Reactive]
+		public string Threads_Error { get; set; } = "";
+
+		//
+		[Reactive]
+		public bool IsExecution { get; set; } = false;
+		
 		// External properties
 		[JsonIgnore]
 		public IStorageProvider Storage { get; set; }
@@ -145,6 +164,10 @@ namespace Vk_Friends_Sender.ViewModels {
 		
 		public ICommand Submit => ReactiveCommand.Create(
 			() => {
+				if (!_Validate()) {
+					return;
+				}
+				
 				_execuition_thread = new(
 					state => {
 						var @event = (ManualResetEvent)state;
@@ -196,5 +219,26 @@ namespace Vk_Friends_Sender.ViewModels {
 		}
 
 		#endregion
+
+		private bool _Validate() {
+			var is_bad = false;
+			
+			if (UserId == 0) {
+				UserId_Error = "User Id is invalid";
+				is_bad = true;
+			}
+
+			if (string.IsNullOrEmpty(ApiKey)) {
+				ApiKey_Error = "Api Key required";
+				is_bad = true;
+			}
+
+			if (Threads == 0) {
+				Threads_Error = "Threads is invalid";
+				is_bad = true;
+			}
+
+			return is_bad;
+		}
 	}
 }

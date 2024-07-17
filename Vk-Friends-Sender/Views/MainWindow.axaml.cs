@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -57,13 +58,57 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 				this.OneWayBind(ViewModel, x => x.Tokens, x => x.list_Tokens.ItemsSource)
 					.DisposeWith(dispose);
 
+				#region User Id
+
 				this.Bind(
 					ViewModel,
 					x => x.UserId,
 					x => x.box_UserId.Text,
-					x => x == 0 ? "" : x.ToString(),
-					x => long.TryParse(x, out var id) ? id : 0
+					x => x == 0 ? string.Empty : x.ToString(),
+					x => long.TryParse(x, out var num) ? num : 0
 				).DisposeWith(dispose);
+				
+				ViewModel.WhenAnyValue(x => x.UserId)
+						 .Select(x => x > 0)
+						 .Subscribe(x => error_UserId.Content = "");
+				
+				this.OneWayBind(ViewModel, x => x.UserId_Error, x => x.error_UserId.Content)
+					.DisposeWith(dispose);
+
+				#endregion
+
+				#region Api Key
+
+				this.Bind(ViewModel, x => x.ApiKey, x => x.box_ApiKey.Text)
+					.DisposeWith(dispose);
+
+				ViewModel.WhenAnyValue(x => x.ApiKey)
+						 .Select(x => x.Length > 0)
+						 .Subscribe(x => error_ApiKey.Content = "");
+				
+				this.OneWayBind(ViewModel, x => x.ApiKey_Error, x => x.error_ApiKey.Content)
+					.DisposeWith(dispose);
+
+				#endregion
+
+				#region Threads
+
+				this.Bind(
+					ViewModel,
+					x => x.Threads,
+					x => x.box_Threads.Text,
+					x => x == 0 ? string.Empty : x.ToString(),
+					x => uint.TryParse(x, out var num) ? num : 0
+				).DisposeWith(dispose);
+
+				ViewModel.WhenAnyValue(x => x.Threads)
+						 .Select(x => x > 0)
+						 .Subscribe(x => error_Threads.Content = "");
+				
+				this.OneWayBind(ViewModel, x => x.Threads_Error, x => x.error_Threads.Content)
+					.DisposeWith(dispose);
+
+				#endregion
 				
 				// Commands binding
 				this.BindCommand(ViewModel, x => x.Proxies_Load, x => x.btn_ProxiesLoad)
@@ -84,6 +129,7 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 				
 				this.BindCommand(ViewModel, x => x.Submit, x => x.btn_Submit)
 					.DisposeWith(dispose);
+
 			}
 		);
 		

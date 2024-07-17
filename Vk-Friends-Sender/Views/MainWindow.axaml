@@ -119,16 +119,37 @@
    Margin="5,10"
    RowDefinitions="1*, 1*">
 
+   <Grid.Styles>
+    <Style Selector="TextBox">
+     <Setter Property="HorizontalAlignment" Value="Stretch" />
+     <Setter Property="VerticalAlignment" Value="Center" />
+     <Setter Property="Margin" Value="5, 0" />
+    </Style>
+
+    <Style Selector="Label">
+     <Setter Property="FontSize" Value="10" />
+    </Style>
+   </Grid.Styles>
+
    <!--  Column 1  -->
-   <TextBox
+   <StackPanel
     Grid.Column="0"
     Grid.Row="0"
-    HorizontalAlignment="Stretch"
-    Name="box_UserId"
-    VerticalAlignment="Center"
-    Watermark="User Id" />
+    Orientation="Vertical">
+    <TextBox Name="box_UserId" Watermark="User Id" />
+    <Label Name="error_UserId" />
+   </StackPanel>
+
+   <StackPanel Grid.Column="0" Grid.Row="1">
+    <TextBox Name="box_ApiKey" Watermark="Two Captcha Api Key" />
+    <Label Name="error_ApiKey" />
+   </StackPanel>
 
    <!--  Column 2  -->
+   <StackPanel Grid.Column="1" Grid.Row="0">
+    <TextBox Name="box_Threads" Watermark="Threads" />
+    <Label Name="error_Threads" />
+   </StackPanel>
 
    <!--  Column 3  -->
    <StackPanel
