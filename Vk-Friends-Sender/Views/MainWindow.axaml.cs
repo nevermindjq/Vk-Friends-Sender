@@ -89,6 +89,12 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 				this.OneWayBind(ViewModel, x => x.ApiKey_Error, x => x.error_ApiKey.Content)
 					.DisposeWith(dispose);
 
+				this.BindCommand(ViewModel, x => x.AuthSolver, x => x.btn_CaptchaAuth)
+					.DisposeWith(dispose);
+
+				this.OneWayBind(ViewModel, x => x.Balance, x => x.lbl_Balance.Content)
+					.DisposeWith(dispose);
+
 				#endregion
 
 				#region Threads
@@ -117,10 +123,10 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 				this.BindCommand(ViewModel, x => x.Proxies_Clear, x => x.btn_ProxiesClear)
 					.DisposeWith(dispose);
 
-				this.BindCommand(ViewModel, x => x.Cookies_Load, x => x.btn_TokensLoad)
+				this.BindCommand(ViewModel, x => x.Tokens_Load, x => x.btn_TokensLoad)
 					.DisposeWith(dispose);
 
-				this.BindCommand(ViewModel, x => x.Cookies_Clear, x => x.btn_TokensClear)
+				this.BindCommand(ViewModel, x => x.Tokens_Clear, x => x.btn_TokensClear)
 					.DisposeWith(dispose);
 
 				// Control Panel

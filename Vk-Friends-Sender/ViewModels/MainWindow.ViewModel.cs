@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
@@ -16,6 +16,7 @@ using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 
 using Vk_Friends_Sender.Models;
+using Vk_Friends_Sender.Services;
 
 namespace Vk_Friends_Sender.ViewModels {
 	[JsonObject(MemberSerialization.OptOut)]
@@ -71,7 +72,19 @@ namespace Vk_Friends_Sender.ViewModels {
 
 		[Reactive]
 		public string ApiKey_Error { get; set; } = "";
-		
+
+		private string _balance = "Balance: 0";
+		public string Balance {
+			get => _balance;
+			set {
+				if (value.StartsWith("Balance")) {
+					value = value[(value.IndexOf(' ') + 1)..];
+				}
+				
+				this.RaiseAndSetIfChanged(ref _balance, $"Balance: {value}");
+			}
+		}
+
 		// Threads
 		[Reactive]
 		public uint Threads { get; set; }
@@ -123,10 +136,10 @@ namespace Vk_Friends_Sender.ViewModels {
 
 		#endregion
 
-		#region Cookies
+		#region Tokens
 
 		[JsonIgnore]
-		public ICommand Cookies_Load => ReactiveCommand.CreateFromTask(
+		public ICommand Tokens_Load => ReactiveCommand.CreateFromTask(
 			async () => {
 				// Pick folder 
 				var options = new FilePickerOpenOptions {
@@ -144,7 +157,9 @@ namespace Vk_Friends_Sender.ViewModels {
 				// Process file
 				
 				using (var reader = new StreamReader(await file.OpenReadAsync())) {
-					Tokens.Add((await reader.ReadLineAsync())!.Trim());
+					while (!reader.EndOfStream) {
+						Tokens.Add((await reader.ReadLineAsync())!.Trim());
+					}
 				}
 			},
 			this.WhenAnyValue(x => x.IsExecution)
@@ -152,34 +167,48 @@ namespace Vk_Friends_Sender.ViewModels {
 		);
 
 		[JsonIgnore]
-		public ICommand Cookies_Clear => ReactiveCommand.Create(() => Tokens.Clear(), this.WhenAnyValue(x => x.IsExecution).Select(x => !x));
+		public ICommand Tokens_Clear => ReactiveCommand.Create(() => Tokens.Clear(), this.WhenAnyValue(x => x.IsExecution).Select(x => !x));
 
 		#endregion
 
+		#region Api Key
+
+		public ICommand AuthSolver => ReactiveCommand.CreateFromTask(() => _ValidateApiTokenAsync(ApiKey));
+
+		#endregion
+		
 		#region Control Panel
 
-		private ICollection<Thread> _worker_threads = new List<Thread>();
-		private Thread _execuition_thread;
-		private ManualResetEvent _event;
+		private readonly ICollection<Thread> _worker_threads = new List<Thread>();
+		private readonly ManualResetEvent _event = new(false);
+		private TwoCaptcha.TwoCaptcha? _solver;
+		private Thread? _execution_thread;
+		private int _proxy_index = 0;
 		
-		public ICommand Submit => ReactiveCommand.Create(
-			() => {
-				if (!_Validate()) {
+		public ICommand Submit => ReactiveCommand.CreateFromTask(
+			async () => {
+				if (!_ValidateProperties() || !await _ValidateApiTokenAsync(ApiKey)) {
 					return;
 				}
 				
-				_execuition_thread = new(
+				_execution_thread = new(
 					state => {
-						var @event = (ManualResetEvent)state;
+						var @event = (ManualResetEvent)state!;
 						var count = Tokens.Count;
 						
 						foreach (var token in Tokens.Select(x => x.Token)) {
 							var thread = new Thread(
-								state => {
-									// TODO action
+								async state => {
+									using (var vk = new Vk(Proxies[_proxy_index], token, solver: _solver)) {
+										await vk.AddToFriendsAsync(UserId);
+									}
+
+									if (Interlocked.Increment(ref _proxy_index) == Proxies.Count) {
+										_proxy_index = 0;
+									}
 
 									if (Interlocked.Decrement(ref count) == 0) {
-										((ManualResetEvent)state).Set();
+										((ManualResetEvent)state!).Set();
 									}
 								}
 							);
@@ -196,8 +225,7 @@ namespace Vk_Friends_Sender.ViewModels {
 					}
 				);
 
-				_event = new(false);
-				_execuition_thread.Start(_event);
+				_execution_thread.Start(_event);
 				
 				//
 				IsExecution = true;
@@ -215,12 +243,26 @@ namespace Vk_Friends_Sender.ViewModels {
 			
 			Dispatcher.UIThread.Invoke(() => IsExecution = false);
 			
-			_execuition_thread.Interrupt();
+			_execution_thread.Interrupt();
 		}
 
 		#endregion
+		
+		private async Task<bool> _ValidateApiTokenAsync(string api_key) {
+			_solver = new(api_key);
 
-		private bool _Validate() {
+			try {
+				Balance = $"{await _solver.Balance()}";
+			} catch {
+				Balance = "0";
+				_solver = null;
+				return false;
+			}
+
+			return true;
+		}
+
+		private bool _ValidateProperties() {
 			var is_bad = false;
 			
 			if (UserId == 0) {
@@ -238,7 +280,7 @@ namespace Vk_Friends_Sender.ViewModels {
 				is_bad = true;
 			}
 
-			return is_bad;
+			return !is_bad;
 		}
 	}
 }
