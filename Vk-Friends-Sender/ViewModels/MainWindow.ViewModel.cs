@@ -30,17 +30,17 @@ namespace Vk_Friends_Sender.ViewModels {
 			= new();
 #elif DEBUG
 			= [
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
-			"host:0:username:password",
+			"username:password@127.0.0.1:0",
+			"username:password@127.0.0.1:0",
+			
+			"127.0.0.1:0@username:password",
+			"127.0.0.1:0@username:password",
+			
+			"username:password:127.0.0.1:0",
+			"username:password:127.0.0.1:0",
+			
+			"127.0.0.1:0:username:password",
+			"127.0.0.1:0:username:password",
 		];
 #endif
 
@@ -127,7 +127,15 @@ namespace Vk_Friends_Sender.ViewModels {
 
 				using (var reader = new StreamReader(await file.OpenReadAsync())) {
 					while (!reader.EndOfStream) {
-						Proxies.Add((await reader.ReadLineAsync())!.Trim());
+						var line = (await reader.ReadLineAsync())!.Trim();
+
+						try {
+							Proxies.Add(line);
+						} catch (ArgumentException e) {
+							Log.Warning(e, "Error while parsing proxy: {proxy}", line);
+						} catch (Exception e) {
+							Log.Error(e, "Unknown error while parsing proxy");
+						}
 					}
 				}
 			},
@@ -197,7 +205,7 @@ namespace Vk_Friends_Sender.ViewModels {
 				}
 				
 				_execution_thread = new(
-					state => {
+					() => {
 						var count = Tokens.Count;
 
 						int i = 0;

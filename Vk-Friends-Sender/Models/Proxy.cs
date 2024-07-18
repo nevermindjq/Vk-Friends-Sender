@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 
 namespace Vk_Friends_Sender.Models {
@@ -9,13 +10,34 @@ namespace Vk_Friends_Sender.Models {
 		public string Password { get; set; } = "Password";
 
 		public static implicit operator Proxy(string str) {
-			var data = str.Split(':');
+			var data = str.Split('@')
+						  .SelectMany(x => x.Split(':'))
+						  .ToArray();
+
+			if (data.Length != 4) {
+				throw new ArgumentException("Proxy has no credentials", nameof(str));
+			}
+
+			int host_index = -1;
+
+			for (int i = 0; i < data.Length; i++) {
+				if (data[i].Split('.').Length == 4) {
+					host_index = i;
+					break;
+				}
+			}
+
+			var username_index = host_index switch {
+				0 => 2,
+				2 => 0,
+				_ => throw new ArgumentException("Proxy's host not found")
+			};
 
 			return new() {
-				Host = data[0],
-				Port = int.Parse(data[1]),
-				Username = data[2],
-				Password = data[3]
+				Host = data[host_index],
+				Port = int.Parse(data[host_index + 1]),
+				Username = data[username_index],
+				Password = data[username_index + 1]
 			};
 		}
 
