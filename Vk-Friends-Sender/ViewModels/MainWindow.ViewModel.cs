@@ -18,6 +18,7 @@ using ReactiveUI.Fody.Helpers;
 
 using Serilog;
 
+using Vk_Friends_Sender.Exceptions;
 using Vk_Friends_Sender.Models;
 using Vk_Friends_Sender.Services;
 
@@ -216,6 +217,8 @@ namespace Vk_Friends_Sender.ViewModels {
 										using (var vk = new Vk(Proxies[_proxy_index], account.Token, solver: _solver)) {
 											try {
 												await vk.AddToFriendsAsync(UserId);
+											} catch (TokenExpiredException) {
+												Tokens.Remove(account);
 											}
 											catch (Exception e) {
 												Log.Error(e, "Error while execution adding");

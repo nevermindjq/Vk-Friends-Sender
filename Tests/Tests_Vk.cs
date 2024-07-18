@@ -6,7 +6,8 @@ using Vk_Friends_Sender.Services;
 
 namespace Tests;
 
-public class Tests_Vk {public async Task Test_SendRequest(string token, string user_agent, long user_id) {
+public class Tests_Vk {
+	public async Task Test_SendRequest(string token, string user_agent, long user_id) {
 		//
 		var logger = new LoggerConfiguration()
 					 .Enrich.FromLogContext()

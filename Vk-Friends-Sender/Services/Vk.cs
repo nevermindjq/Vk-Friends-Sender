@@ -1,11 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
 
 using Microsoft.Playwright;
@@ -16,6 +11,8 @@ using Newtonsoft.Json.Linq;
 using Serilog;
 
 using TwoCaptcha.Captcha;
+
+using Vk_Friends_Sender.Exceptions;
 
 using Proxy = Vk_Friends_Sender.Models.Proxy;
 
@@ -94,6 +91,8 @@ namespace Vk_Friends_Sender.Services {
 					}
 					
 					return _SolveCaptchaAsync(json.Value<string>("redirect_uri"));
+				case 1117:
+					throw new TokenExpiredException(_token);
 			}
 
 			return Task.FromResult(false);
@@ -167,31 +166,6 @@ namespace Vk_Friends_Sender.Services {
 			}
 
 			return buffer[..received];
-		}
-
-		private async Task<bool> _SubmitSolveCaptchaAsync(string url, string id, string code) {
-			var request = new HttpRequestMessage(HttpMethod.Post, url) {
-				Content = new MultipartFormDataContent {
-					{ new StringContent(id), "captcha_sid" },
-					{ new StringContent(code), "captcha_key" }
-				}
-			};
-
-			if (await _http.SendAsync(request) is not {} response) {
-				throw new NullReferenceException("[VK API] Error null reference of 'SubmitSolveCaptcha' response");
-			}
-
-			if (!response.IsSuccessStatusCode) {
-				_logger?.Warning("[VK API] Captcha not submitted: {content}", await response.Content.ReadAsStringAsync());
-				
-				return false;
-			}
-
-#if DEBUG
-			_logger?.Debug("[VK API] Captcha submitted successfully: {content}", await response.Content.ReadAsStringAsync());
-#endif
-
-			return true;
 		}
 	}
 }
