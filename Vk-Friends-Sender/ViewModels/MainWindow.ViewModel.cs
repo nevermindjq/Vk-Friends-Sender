@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +27,11 @@ using Vk_Friends_Sender.Services;
 namespace Vk_Friends_Sender.ViewModels {
 	[JsonObject(MemberSerialization.OptOut)]
 	public class MainWindow : ReactiveObject {
+		private readonly AutoResetEvent _main_event = new(false);
+		private readonly AutoResetEvent _groups_event = new(false);
+
+		public bool ValidateProxies { get; set; } = false;
+		
 		public ObservableCollection<Proxy> Proxies { get; }
 #if RELEASE
 			= new();
@@ -105,11 +112,14 @@ namespace Vk_Friends_Sender.ViewModels {
 		public IStorageProvider Storage { get; set; }
 
 		#region Proxies
-
-		// host:port:username:password
+		
 		[JsonIgnore]
 		public ICommand Proxies_Load => ReactiveCommand.CreateFromTask(
 			async () => {
+				if (!_ValidateProperties()) {
+					return;
+				}
+				
 				// Pick file
 				var options = new FilePickerOpenOptions {
 					AllowMultiple = false,
@@ -125,19 +135,59 @@ namespace Vk_Friends_Sender.ViewModels {
 
 				// Process file
 
+				IEnumerable<string> lines;
+                
 				using (var reader = new StreamReader(await file.OpenReadAsync())) {
-					while (!reader.EndOfStream) {
-						var line = (await reader.ReadLineAsync())!.Trim();
-
-						try {
-							Proxies.Add(line);
-						} catch (ArgumentException e) {
-							Log.Warning(e, "Error while parsing proxy: {proxy}", line);
-						} catch (Exception e) {
-							Log.Error(e, "Unknown error while parsing proxy");
-						}
-					}
+					lines = (await reader.ReadToEndAsync()).Split('\n');
 				}
+
+				var count = lines.Count();
+				
+				int i = 0;
+						
+				var query = from s in lines
+						let num = i++
+						group s by num / Threads
+						into g
+						select g;
+
+				foreach (var group in query) {
+					var items = group.Count();
+					
+					foreach (var line in group) {
+						new Thread(
+							async state => {
+								try {
+									Proxy proxy = (string)state;
+
+									if (!await _CheckProxyAsync(proxy)) {
+										return;
+									}
+
+									Proxies.Add(proxy);
+								} catch (ArgumentNullException) {
+									// ignore
+								} catch (ArgumentException e) {
+									Log.Warning(e, "Error while parsing proxy: {proxy}", state);
+								} catch (Exception e) {
+									Log.Error(e, "Unknown error while parsing proxy");
+								} finally {
+									if (Interlocked.Decrement(ref items) == 0) {
+										_groups_event.Set();
+									}
+									
+									if (Interlocked.Decrement(ref count) == 0) {
+										_main_event.Set();
+									}
+								}
+							}
+						).Start(line);
+					}
+
+					_groups_event.WaitOne();
+				}
+
+				_main_event.WaitOne();
 			},
 			this.WhenAnyValue(x => x.IsExecution)
 				.Select(x => !x)
@@ -192,8 +242,6 @@ namespace Vk_Friends_Sender.ViewModels {
 		#region Control Panel
 
 		private readonly ICollection<Thread> _worker_threads = new List<Thread>();
-		private readonly ManualResetEvent _main_event = new(false);
-		private readonly ManualResetEvent _groups_event = new(false);
 		private TwoCaptcha.TwoCaptcha? _solver;
 		private Thread? _execution_thread;
 		private int _proxy_index = 0;
@@ -222,7 +270,16 @@ namespace Vk_Friends_Sender.ViewModels {
 							foreach (var account in group) {
 								var thread = new Thread(
 									async () => {
-										using (var vk = new Vk(Proxies[_proxy_index], account.Token, solver: _solver)) {
+										var proxy = Proxies[_proxy_index];
+										
+										while (!await _CheckProxyAsync(proxy)) {
+											Proxies.RemoveAt(_proxy_index);
+											_proxy_index--;
+
+											proxy = Proxies[_proxy_index];
+										}
+										
+										using (var vk = new Vk(proxy, account.Token, solver: _solver)) {
 											try {
 												await vk.AddToFriendsAsync(UserId);
 											} catch (TokenExpiredException) {
@@ -254,7 +311,6 @@ namespace Vk_Friends_Sender.ViewModels {
 
 							try {
 								_groups_event.WaitOne();
-								_groups_event.Reset();
 							}
 							catch {
 								// ignore
@@ -263,7 +319,6 @@ namespace Vk_Friends_Sender.ViewModels {
 
 						try {
 							_main_event.WaitOne();
-							_main_event.Reset();
 						}
 						catch {
 							// ignore
@@ -295,6 +350,34 @@ namespace Vk_Friends_Sender.ViewModels {
 		}
 
 		#endregion
+
+		private async Task<bool> _CheckProxyAsync(Proxy proxy) {
+			if (!ValidateProxies) {
+				return true;
+			}
+            
+			var handler = new HttpClientHandler {
+				UseCookies = false,
+				UseProxy = true,
+				Proxy = (WebProxy)proxy
+			};
+
+			using (var http = new HttpClient(handler, true)) {
+				HttpResponseMessage response;
+				
+				try {
+					response = await http.GetAsync("https://api.ipify.org");
+				} catch {
+					return false;
+				}
+
+				if (!response.IsSuccessStatusCode) {
+					return false;
+				}
+			}
+
+			return true;
+		}
 		
 		private async Task<bool> _ValidateApiTokenAsync(string api_key) {
 			_solver = new(api_key);

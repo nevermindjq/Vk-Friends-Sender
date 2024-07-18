@@ -16,15 +16,6 @@ namespace Vk_Friends_Sender {
 						 .CreateLogger();
 			
 			Logger.Sink = new SerilogSink(level, areas.Length == 0 ? [
-				LogArea.Visual,
-				LogArea.Platform,
-				LogArea.Animations,
-				LogArea.Binding,
-				LogArea.Control,
-				LogArea.Layout,
-				LogArea.Property,
-				
-				// Platforms
 				LogArea.Win32Platform,
 				LogArea.LinuxFramebufferPlatform
 			] : areas);

@@ -15,7 +15,7 @@ namespace Vk_Friends_Sender.Models {
 						  .ToArray();
 
 			if (data.Length != 4) {
-				throw new ArgumentException("Proxy has no credentials", nameof(str));
+				throw new ArgumentNullException($"Proxy has no credentials or empty: {str}", nameof(str));
 			}
 
 			int host_index = -1;

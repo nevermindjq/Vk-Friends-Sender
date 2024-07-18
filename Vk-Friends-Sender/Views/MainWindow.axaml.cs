@@ -48,7 +48,6 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 		};
 #endif
 		
-		
 		this.WhenActivated(
 			dispose => {
 				// Properties binding
@@ -56,6 +55,9 @@ public partial class MainWindow : ReactiveWindow<ViewModels.MainWindow> {
 					.DisposeWith(dispose);
 
 				this.OneWayBind(ViewModel, x => x.Tokens, x => x.list_Tokens.ItemsSource)
+					.DisposeWith(dispose);
+
+				this.Bind(ViewModel, x => x.ValidateProxies, x => x.check_ValidateProxies.IsChecked)
 					.DisposeWith(dispose);
 
 				#region User Id
